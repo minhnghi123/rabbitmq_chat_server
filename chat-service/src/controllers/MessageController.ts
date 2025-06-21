@@ -6,7 +6,7 @@ import { ApiError, handleMessageReceived } from "../utils";
 const send = async (req: AuthRequest, res: Response) => {
   try {
     const { receiverId, message } = req.body;
-    const { _id, email, name } = req.user;
+    const { _id, email, name } = req.user!;
     validateReceiver(_id, receiverId);
 
     const newMessage = await Message.create({
@@ -41,7 +41,7 @@ const validateReceiver = (senderId: string, receiverId: string) => {
 const getConversation = async (req: AuthRequest, res: Response) => {
   try {
     const { receiverId } = req.params;
-    const senderId = req.user._id;
+    const senderId = req.user!._id;
 
     const messages = await Message.find({
       $or: [
@@ -60,4 +60,8 @@ const getConversation = async (req: AuthRequest, res: Response) => {
       message: error.message,
     });
   }
+};
+export default {
+  send,
+  getConversation,
 };

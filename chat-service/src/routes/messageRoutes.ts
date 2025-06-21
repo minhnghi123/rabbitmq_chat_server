@@ -10,7 +10,9 @@ messageRoutes.get(
   "/get/:receiverId",
   // @ts-ignore
   authMiddleware,
-  MessageController.getConversation
+  (req, res) => {
+    MessageController.getConversation(req, res);
+  }
 );
 
 export default messageRoutes;
