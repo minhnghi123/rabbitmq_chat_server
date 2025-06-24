@@ -2,6 +2,7 @@ import amqp, { Connection, Channel } from "amqplib";
 import config from "../config/config";
 import { User } from "../database";
 import { ApiError } from "../utils";
+import mongoose from "mongoose";
 
 class RabbitMQService {
   private requestQueue = "USER_DETAILS_REQUEST";
@@ -23,25 +24,33 @@ class RabbitMQService {
   private async listenForRequests() {
     this.channel.consume(this.requestQueue, async (msg) => {
       if (msg && msg.content) {
-        const { userId } = JSON.parse(msg.content.toString());
-        const userDetails = await getUserDetails(userId);
+        try {
+          const { userId } = JSON.parse(msg.content.toString());
+          const userDetails = await getUserDetails(userId);
 
-        // Send the user details response
-        this.channel.sendToQueue(
-          this.responseQueue,
-          Buffer.from(JSON.stringify(userDetails)),
-          {
-            correlationId: msg.properties.correlationId,
-          }
-        );
-
-        //Acknowledge the message
-        this.channel.ack(msg);
+          // Send the user details response
+          this.channel.sendToQueue(
+            this.responseQueue,
+            Buffer.from(JSON.stringify(userDetails)),
+            {
+              correlationId: msg.properties.correlationId,
+            }
+          );
+        } catch (error) {
+          // Log error, optionally send error response
+          console.error(error);
+        } finally {
+          // Always acknowledge the message to avoid crash
+          this.channel.ack(msg);
+        }
       }
     });
   }
 }
 const getUserDetails = async (userId: string) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
   const userDetails = await User.findById(userId).select("-password");
   if (!userDetails) {
     throw new ApiError(404, "User not found");

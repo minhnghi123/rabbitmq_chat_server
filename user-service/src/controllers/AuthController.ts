@@ -19,11 +19,11 @@ const cookieOptions = {
 const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
-    const userExists = await User.findOne({
-      email: email,
-    });
+    const userExists = await User.findOne({ email });
     if (userExists) {
-      throw new ApiError(400, "User already exists !");
+      return res
+        .status(400)
+        .json({ status: 400, message: "User already exists!" });
     }
     const user = await User.create({
       name,
@@ -41,7 +41,7 @@ const register = async (req: Request, res: Response) => {
       data: userData,
     });
   } catch (error: any) {
-    return res.json({
+    return res.status(500).json({
       status: 500,
       message: error.message,
     });
@@ -62,11 +62,16 @@ const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email }).select("+password");
-    if (!user || !(await isPasswordMatch(password, user.password as string))) {
-      throw new ApiError(400, "Incorrect email or password");
+    if (!user) {
+      return res.status(400).json({ status: 400, message: "User not found" });
     }
-
-    const token = await createSendToken(user!, res);
+    const isMatch = await isPasswordMatch(password, user.password as string);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ status: 400, message: "Incorrect email or password" });
+    }
+    const token = await createSendToken(user, res);
 
     return res.json({
       status: 200,
@@ -74,7 +79,7 @@ const login = async (req: Request, res: Response) => {
       token,
     });
   } catch (error: any) {
-    return res.json({
+    return res.status(500).json({
       status: 500,
       message: error.message,
     });

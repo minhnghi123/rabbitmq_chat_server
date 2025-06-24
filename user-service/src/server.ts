@@ -18,7 +18,7 @@ app.use(errorHandler);
 
 connectDB();
 
-server = app.listen(config.PORT, () => {
+server = app.listen(Number(config.PORT) || 8081, "0.0.0.0", () => {
   console.log(`User service is running on port ${config.PORT}`);
 });
 
